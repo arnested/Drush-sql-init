@@ -23,13 +23,12 @@ function sqlinit_drush_command() {
  * This currently only works with mysql.
  */
 function drush_sqlinit_sql_inti() {
-
   if (drush_get_option('db-url', FALSE)) {
     $db_spec['db-url'] = $GLOBALS['db_url'];
   }
 
   if (!isset($db_spec)) {
-    $db_spec = drush_sql_conf();
+    $db_spec = drush_sqlinit_sql_conf();
   }
 
   drush_backend_set_result($db_spec);
@@ -56,4 +55,19 @@ function drush_sqlinit_sql_inti() {
   mysql_query($grant_query);
 
   return drush_log(dt('Database (@database) and user (@user) created', array('@user' => $db_spec['username'], '@database' => $db_spec['database'])), 'success');
+}
+
+function drush_sqlinit_sql_conf() {
+  if (drush_get_option('db-url', FALSE)) {
+    $db_spec['db-url'] = $GLOBALS['db_url'];
+  }
+  elseif (drush_get_option('all', FALSE)) {
+    $db_spec = _drush_sql_get_all_db_specs();
+  }
+  if (!isset($db_spec)) {
+    $db_spec = _drush_sql_get_db_spec();
+  }
+  drush_backend_set_result($db_spec);
+
+  return $db_spec;
 }
