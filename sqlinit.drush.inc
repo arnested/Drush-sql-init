@@ -25,7 +25,7 @@ function sqlinit_drush_command() {
 function drush_sqlinit_sql_inti() {
 
   if (drush_get_option('db-url', FALSE)) {
-    $db_spec['db-url'] = $GLOBALS['db_url'];
+    $db_spec = drush_convert_db_from_db_url(drush_get_option('db-url'));
   }
 
   if (!isset($db_spec)) {
@@ -43,6 +43,11 @@ function drush_sqlinit_sql_inti() {
   // Connect as root.
   $root = drush_convert_db_from_db_url($root_url);
 
+  // Port.
+  if (!empty($db_spec['port'])) {
+    $root['host'] .= ':' . $db_spec['port'];
+  }
+
   mysql_connect($root['host'], $root['username'], $root['password']);
 
   // Create the database.
@@ -55,5 +60,21 @@ function drush_sqlinit_sql_inti() {
   }
   mysql_query($grant_query);
 
-  return drush_log(dt('Database (@database) and user (@user) created', array('@user' => $db_spec['username'], '@database' => $db_spec['database'])), 'success');
+  // Make sure our user can write to it from anywhere.
+  $grant_query = 'GRANT ALL PRIVILEGES ON `' . $db_spec['database'] . '`.* TO \'' . $db_spec['username'] . '\'@\'%\'';
+  if (isset($db_spec['password'])) {
+    $grant_query .= ' IDENTIFIED BY \'' . $db_spec['password'] . '\'';
+  }
+  mysql_query($grant_query);
+
+  return drush_log(dt('Database (@database) and user (@user) created on @host', array('@user' => $db_spec['username'], '@database' => $db_spec['database'], '@host' => $db_spec['host'])), 'success');
+}
+
+/**
+ * Implements drush_hook_pre_COMMAND().
+ *
+ * Before a site-install ensure we have a database and a database user.
+ */
+function drush_sqlinit_pre_site_install() {
+  drush_sqlinit_sql_inti();
 }
