@@ -38,7 +38,14 @@ function drush_sqlinit_sql_inti() {
     return FALSE;
   }
 
-  $root_url = 'mysql://root@' . $db_spec['host'];
+  $debian_conf = drush_sqlinit_debian_conf();
+  if ($debian_conf) {
+    $root_url = 'mysql://' . $debian_conf['client']['user'] . ':' . $debian_conf['client']['password'] . '@' . $db_spec['host'];
+  }
+  else {
+    $root_url = 'mysql://root@' . $db_spec['host'];
+  }
+
   // Connect as root.
   $root = drush_convert_db_from_db_url($root_url);
 
@@ -70,4 +77,12 @@ function drush_sqlinit_sql_conf() {
   drush_backend_set_result($db_spec);
 
   return $db_spec;
+}
+
+function drush_sqlinit_debian_conf() {
+  $debian_cnf = '/etc/mysql/debian.cnf';
+  if (file_exists($debian_cnf)) {
+    return parse_ini_file($debian_cnf, TRUE);
+  }
+  return FALSE;
 }
